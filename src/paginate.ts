@@ -1,4 +1,5 @@
 import {
+  getManager,
   Repository,
   FindManyOptions,
   SelectQueryBuilder,
@@ -21,6 +22,7 @@ export async function paginate<T, CustomMetaType = IPaginationMeta>(
   options: IPaginationOptions<CustomMetaType>,
   searchOptions?: FindConditions<T> | FindManyOptions<T>,
 ): Promise<Pagination<T, CustomMetaType>>;
+
 export async function paginate<T, CustomMetaType = IPaginationMeta>(
   queryBuilder: SelectQueryBuilder<T>,
   options: IPaginationOptions<CustomMetaType>,
@@ -214,6 +216,8 @@ async function paginateQueryBuilder<T, CustomMetaType = IPaginationMeta>(
   ];
 
   if (countQueries) {
+    console.log('promise countQueries => ');
+
     promises[1] = countQuery(queryBuilder);
   }
 
@@ -233,6 +237,7 @@ async function paginateQueryBuilder<T, CustomMetaType = IPaginationMeta>(
 const countQuery = async <T>(
   queryBuilder: SelectQueryBuilder<T>,
 ): Promise<number> => {
+  console.log('countQuery => ');
   const totalQueryBuilder = queryBuilder.clone();
 
   totalQueryBuilder
@@ -241,12 +246,26 @@ const countQuery = async <T>(
     .offset(undefined)
     .take(undefined);
 
-  const { value } = await queryBuilder.connection
-    .createQueryBuilder()
-    .select('COUNT(*)', 'value')
-    .from(`(${totalQueryBuilder.getQuery()})`, 'uniqueTableAlias')
-    .setParameters(queryBuilder.getParameters())
-    .getRawOne<{ value: string }>();
+  const manager = getManager();
+
+  console.log('getParameters => ');
+  console.log(queryBuilder.getParameters());
+
+  // const { value } = await queryBuilder.connection
+  //   .createQueryBuilder()
+  //   .select('COUNT(*)', 'value')
+  //   .from(`(${totalQueryBuilder.getQuery()})`, 'uniqueTableAlias')
+  //   .setParameters(queryBuilder.getParameters())
+  //   .getRawOne<{ value: string }>();
+
+  const { value } = await manager.query(
+    `SELECT reltuples AS value FROM pg_class where relname = 'invoice'`,
+  );
+  // .createQueryBuilder()
+  // .select('COUNT(*)', 'value')
+  // .from(`(${totalQueryBuilder.getQuery()})`, 'uniqueTableAlias')
+  // .setParameters(queryBuilder.getParameters())
+  // .getRawOne<{ value: string }>();
 
   return Number(value);
 };
